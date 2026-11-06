@@ -1,0 +1,49 @@
+name: Release DSH Plugin
+
+on:
+  push:
+    tags:
+      - 'v*' # 当你推送 v 开头的 tag 时触发打包
+
+permissions:
+  contents: write # 允许 Action 创建 Release 并上传文件
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # 根据你的项目需求调整，建议 20 或 22
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+          run_install: false
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build and Pack
+        run: |
+          # 如果项目的 package.json 里有 prepack 脚本，npm pack 会自动触发 build
+          # 如果没有，请在这里手动加上构建命令，例如：pnpm run build
+          npm pack
+          
+      - name: Verify Tarball
+        run: |
+          # 列出生成的 .tgz 文件，确认打包成功
+          ls -la *.tgz
+
+      - name: Create Release and Upload Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: "*.tgz" # 自动匹配生成的压缩包
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
